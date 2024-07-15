@@ -34,6 +34,14 @@ async fn main() {
                     .await?;
                     Ok::<(), RequestError>(())
                 }
+                Commands::Promote { user_id } => {
+                    bot.promote_chat_member(msg.chat.id, UserId(user_id))
+                        .can_post_stories(true)
+                        .can_edit_stories(true)
+                        .can_delete_stories(true)
+                        .await?;
+                    Ok(())
+                }
             }
         }),
     );
@@ -57,11 +65,11 @@ struct ConfigParameters {
     bot_maintainer: UserId,
 }
 
-/// Maintainer commands
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase")]
 enum Commands {
-    /// Generate a number within range
     #[command(parse_with = "split")]
     Rights { user_id: u64 },
+    #[command(parse_with = "split")]
+    Promote { user_id: u64 },
 }

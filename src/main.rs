@@ -1,4 +1,4 @@
-use teloxide::{prelude::*, utils::command::BotCommands, RequestError};
+use teloxide::{prelude::*, RequestError};
 
 #[tokio::main]
 async fn main() {
@@ -7,47 +7,16 @@ async fn main() {
 
     let bot = Bot::from_env();
 
-    let parameters = ConfigParameters {
-        bot_maintainer: UserId(1459074222),
-    };
+    let handler = Update::filter_channel_post().endpoint(|msg: Message, bot: Bot| async move {
+        if !msg.text().unwrap_or_default().starts_with("MessageKind: ") {
+            bot.send_message(msg.chat.id, format!("MessageKind: {:#?}", msg.kind))
+                .await?;
+        }
 
-    let handler = Update::filter_message().branch(
-        // Filter a maintainer by a user ID.
-        dptree::filter(|cfg: ConfigParameters, msg: Message| {
-            msg.from()
-                .map(|user| user.id == cfg.bot_maintainer)
-                .unwrap_or_default()
-        })
-        .filter_command::<Commands>()
-        .endpoint(|msg: Message, bot: Bot, cmd: Commands| async move {
-            match cmd {
-                Commands::Rights { user_id } => {
-                    bot.send_message(
-                        msg.chat.id,
-                        format!(
-                            "Rights of {user_id}: {:#?}",
-                            bot.get_chat_member(msg.chat.id, UserId(user_id))
-                                .await?
-                                .kind
-                        ),
-                    )
-                    .await?;
-                    Ok::<(), RequestError>(())
-                }
-                Commands::Promote { user_id } => {
-                    bot.promote_chat_member(msg.chat.id, UserId(user_id))
-                        .can_post_stories(true)
-                        .can_edit_stories(true)
-                        .can_delete_stories(true)
-                        .await?;
-                    Ok(())
-                }
-            }
-        }),
-    );
+        Ok::<(), RequestError>(())
+    });
 
     Dispatcher::builder(bot, handler)
-        .dependencies(dptree::deps![parameters])
         .default_handler(|upd| async move {
             log::warn!("Unhandled update: {:?}", upd);
         })
@@ -58,18 +27,4 @@ async fn main() {
         .build()
         .dispatch()
         .await;
-}
-
-#[derive(Clone)]
-struct ConfigParameters {
-    bot_maintainer: UserId,
-}
-
-#[derive(BotCommands, Clone)]
-#[command(rename_rule = "lowercase")]
-enum Commands {
-    #[command(parse_with = "split")]
-    Rights { user_id: u64 },
-    #[command(parse_with = "split")]
-    Promote { user_id: u64 },
 }

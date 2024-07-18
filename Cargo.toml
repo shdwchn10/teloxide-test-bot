@@ -11,5 +11,5 @@ log = "0.4"
 pretty_env_logger = "0.5"
 teloxide = { features = [
     "full",
-], git = "https://github.com/shdwchn10/teloxide.git", branch = "support-tba-6.9" }
+], git = "https://github.com/shdwchn10/teloxide.git", branch = "support-tba-7.0-p2" }
 tokio = { features = ["full"], version = "1.38" }

@@ -1,9 +1,13 @@
-use teloxide::{prelude::*, utils::command::BotCommands, RequestError};
+use teloxide::{
+    prelude::*,
+    types::{MessageReactionCountUpdated, MessageReactionUpdated, ReactionType, ReactionTypeKind},
+    utils::command::BotCommands,
+    RequestError,
+};
 
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
-    log::info!("Starting dispatching features bot...");
 
     let bot = Bot::from_env();
 
@@ -11,42 +15,93 @@ async fn main() {
         bot_maintainer: UserId(1459074222),
     };
 
-    let handler = Update::filter_message().branch(
-        // Filter a maintainer by a user ID.
-        dptree::filter(|cfg: ConfigParameters, msg: Message| {
-            msg.from()
-                .map(|user| user.id == cfg.bot_maintainer)
-                .unwrap_or_default()
+    let handler = dptree::entry()
+        .inspect(|u: Update| {
+            eprintln!("{u:#?}"); // Print the update to the console with inspect
         })
-        .filter_command::<Commands>()
-        .endpoint(|msg: Message, bot: Bot, cmd: Commands| async move {
-            match cmd {
-                Commands::Rights { user_id } => {
-                    bot.send_message(
-                        msg.chat.id,
-                        format!(
-                            "Rights of {user_id}: {:#?}",
-                            bot.get_chat_member(msg.chat.id, UserId(user_id))
-                                .await?
-                                .kind
-                        ),
-                    )
+        .branch(Update::filter_message_reaction_updated().endpoint(
+            |msg: MessageReactionUpdated, bot: Bot| async move {
+                bot.send_message(msg.chat.id, format!("MessageReactionUpdated: {:#?}", msg))
                     .await?;
-                    Ok::<(), RequestError>(())
-                }
-                Commands::Promote { user_id } => {
-                    bot.promote_chat_member(msg.chat.id, UserId(user_id))
-                        .can_post_stories(true)
-                        .can_edit_stories(true)
-                        .can_delete_stories(true)
-                        .await?;
-                    Ok(())
-                }
-            }
-        }),
-    );
+                Ok::<(), RequestError>(())
+            },
+        ))
+        .branch(Update::filter_message_reaction_count_updated().endpoint(
+            |msg: MessageReactionCountUpdated, bot: Bot| async move {
+                bot.send_message(
+                    msg.chat.id,
+                    format!("MessageReactionCountUpdated: {:#?}", msg),
+                )
+                .await?;
+                Ok::<(), RequestError>(())
+            },
+        ))
+        .branch(Update::filter_channel_post().filter_command::<Commands>().endpoint(
+            |msg: Message, bot: Bot, cmd: Commands| async move {
+                match cmd {
+                    Commands::Reactions => {
+                        let text = match bot.get_chat(msg.chat.id).await?.available_reactions {
+                            Some(r) => format!("Available reactions: {r:?}"),
+                            None => "All reactions are available".to_owned(),
+                        };
 
-    Dispatcher::builder(bot, handler)
+                        bot.send_message(msg.chat.id, text)
+                            .reply_to_message_id(msg.id)
+                            .await?;
+                        Ok(())
+                    }
+                }
+            },
+        ))
+        .branch(
+            Update::filter_message()
+                .branch(
+                    dptree::filter(|cfg: ConfigParameters, msg: Message| {
+                        msg.from()
+                            .map(|user| user.id == cfg.bot_maintainer)
+                            .unwrap_or_default()
+                    })
+                    .filter_command::<MaintainerCommands>()
+                    .endpoint(
+                        |msg: Message, bot: Bot, cmd: MaintainerCommands| async move {
+                            match cmd {
+                                MaintainerCommands::Rights { user_id } => {
+                                    bot.send_message(
+                                        msg.chat.id,
+                                        format!(
+                                            "Rights of {user_id}: {:#?}",
+                                            bot.get_chat_member(msg.chat.id, UserId(user_id))
+                                                .await?
+                                                .kind
+                                        ),
+                                    )
+                                    .await?;
+                                    Ok::<(), RequestError>(())
+                                }
+                            }
+                        },
+                    ),
+                )
+                .branch(
+                    dptree::filter(|msg: Message| {
+                        let Some(text) = msg.text() else { return false };
+                        text.contains('🌭')
+                    })
+                    .endpoint(|msg: Message, bot: Bot| async move {
+                        bot.set_message_reaction(msg.chat.id, msg.id)
+                            .reaction(vec![ReactionType {
+                                kind: ReactionTypeKind::Emoji {
+                                    emoji: '🌭'.into()
+                                },
+                            }])
+                            .is_big(true)
+                            .await?;
+                        Ok::<(), RequestError>(())
+                    }),
+                ),
+        );
+
+    Dispatcher::builder(bot.clone(), handler)
         .dependencies(dptree::deps![parameters])
         .default_handler(|upd| async move {
             log::warn!("Unhandled update: {:?}", upd);
@@ -67,9 +122,13 @@ struct ConfigParameters {
 
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase")]
-enum Commands {
+enum MaintainerCommands {
     #[command(parse_with = "split")]
     Rights { user_id: u64 },
-    #[command(parse_with = "split")]
-    Promote { user_id: u64 },
+}
+
+#[derive(BotCommands, Clone)]
+#[command(rename_rule = "lowercase")]
+enum Commands {
+    Reactions,
 }

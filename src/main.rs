@@ -1,8 +1,8 @@
 use teloxide::{
     prelude::*,
     types::{
-        LinkPreviewOptions, MessageEntityKind, MessageReactionCountUpdated, MessageReactionUpdated,
-        ReactionType, ReactionTypeKind,
+        ChatBoostRemoved, ChatBoostUpdated, LinkPreviewOptions, MessageEntityKind,
+        MessageReactionCountUpdated, MessageReactionUpdated, ReactionType, ReactionTypeKind,
     },
     utils::command::BotCommands,
     RequestError,
@@ -39,6 +39,20 @@ async fn main() {
                 Ok::<(), RequestError>(())
             },
         ))
+        .branch(Update::filter_chat_boost().endpoint(
+            |upd: ChatBoostUpdated, bot: Bot| async move {
+                bot.send_message(upd.chat.id, format!("ChatBoostUpdated: {:#?}", upd))
+                    .await?;
+                Ok(())
+            },
+        ))
+        .branch(Update::filter_removed_chat_boost().endpoint(
+            |upd: ChatBoostRemoved, bot: Bot| async move {
+                bot.send_message(upd.chat.id, format!("ChatBoostRemoved: {:#?}", upd))
+                    .await?;
+                Ok(())
+            },
+        ))
         .branch(
             Update::filter_channel_post()
                 .filter_command::<Commands>()
@@ -53,6 +67,19 @@ async fn main() {
                             bot.send_message(msg.chat.id, text)
                                 .reply_to_message_id(msg.id)
                                 .await?;
+                            Ok(())
+                        }
+                        Commands::Boosts { user_id } => {
+                            bot.send_message(
+                                msg.chat.id,
+                                format!(
+                                    "User `{user_id}` boosts: {:?}",
+                                    bot.get_user_chat_boosts(msg.chat.id, UserId(user_id))
+                                        .await?
+                                ),
+                            )
+                            .reply_to_message_id(msg.id)
+                            .await?;
                             Ok(())
                         }
                     }
@@ -170,4 +197,8 @@ enum MaintainerCommands {
 #[command(rename_rule = "lowercase")]
 enum Commands {
     Reactions,
+    #[command(parse_with = "split")]
+    Boosts {
+        user_id: u64,
+    },
 }

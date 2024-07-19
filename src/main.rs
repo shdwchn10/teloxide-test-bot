@@ -1,6 +1,9 @@
 use teloxide::{
     prelude::*,
-    types::{MessageReactionCountUpdated, MessageReactionUpdated, ReactionType, ReactionTypeKind},
+    types::{
+        LinkPreviewOptions, MessageEntityKind, MessageReactionCountUpdated, MessageReactionUpdated,
+        ReactionType, ReactionTypeKind,
+    },
     utils::command::BotCommands,
     RequestError,
 };
@@ -36,23 +39,25 @@ async fn main() {
                 Ok::<(), RequestError>(())
             },
         ))
-        .branch(Update::filter_channel_post().filter_command::<Commands>().endpoint(
-            |msg: Message, bot: Bot, cmd: Commands| async move {
-                match cmd {
-                    Commands::Reactions => {
-                        let text = match bot.get_chat(msg.chat.id).await?.available_reactions {
-                            Some(r) => format!("Available reactions: {r:?}"),
-                            None => "All reactions are available".to_owned(),
-                        };
+        .branch(
+            Update::filter_channel_post()
+                .filter_command::<Commands>()
+                .endpoint(|msg: Message, bot: Bot, cmd: Commands| async move {
+                    match cmd {
+                        Commands::Reactions => {
+                            let text = match bot.get_chat(msg.chat.id).await?.available_reactions {
+                                Some(r) => format!("Available reactions: {r:?}"),
+                                None => "All reactions are available".to_owned(),
+                            };
 
-                        bot.send_message(msg.chat.id, text)
-                            .reply_to_message_id(msg.id)
-                            .await?;
-                        Ok(())
+                            bot.send_message(msg.chat.id, text)
+                                .reply_to_message_id(msg.id)
+                                .await?;
+                            Ok(())
+                        }
                     }
-                }
-            },
-        ))
+                }),
+        )
         .branch(
             Update::filter_message()
                 .branch(
@@ -96,7 +101,41 @@ async fn main() {
                             }])
                             .is_big(true)
                             .await?;
-                        Ok::<(), RequestError>(())
+                        Ok(())
+                    }),
+                )
+                .branch(
+                    dptree::filter(|msg: Message| {
+                        let Some(entities) = msg.entities() else {
+                            return false;
+                        };
+                        entities.iter().any(|e| {
+                            matches!(
+                                e.kind,
+                                MessageEntityKind::Url | MessageEntityKind::TextLink { .. }
+                            )
+                        })
+                    })
+                    .endpoint(|msg: Message, bot: Bot| async move {
+                        let link_preview_options = msg.link_preview_options();
+                        bot.send_message(
+                            msg.chat.id,
+                            format!("LinkPreviewOptions: {link_preview_options:#?}"),
+                        )
+                        .reply_to_message_id(msg.id)
+                        .link_preview_options(
+                            link_preview_options
+                                .unwrap_or(&LinkPreviewOptions {
+                                    is_disabled: None,
+                                    url: None,
+                                    prefer_small_media: None,
+                                    prefer_large_media: None,
+                                    show_above_text: None,
+                                })
+                                .clone(),
+                        )
+                        .await?;
+                        Ok(())
                     }),
                 ),
         );

@@ -99,6 +99,42 @@ async fn main() {
         .branch(
             Update::filter_message()
                 .branch(
+                    Message::filter_story().endpoint(|msg: Message, bot: Bot| async move {
+                        bot.send_message(
+                            msg.chat.id,
+                            format!("I hate stories! Story: {:#?}", msg.story().unwrap()),
+                        )
+                        .reply_parameters(ReplyParameters {
+                            message_id: msg.id,
+                            chat_id: None,
+                            allow_sending_without_reply: None,
+                            quote: None,
+                        })
+                        .await?;
+                        Ok(())
+                    }),
+                )
+                .branch(Message::filter_reply_to_story().endpoint(
+                    |msg: Message, bot: Bot| async move {
+                        bot.send_message(
+                            msg.chat.id,
+                            format!("Reply to Story: {:#?}", msg.reply_to_story().unwrap()),
+                        )
+                        .await?;
+                        Ok(())
+                    },
+                ))
+                .branch(Message::filter_boost_added().endpoint(
+                    |msg: Message, bot: Bot| async move {
+                        bot.send_message(
+                            msg.chat.id,
+                            format!("Chat Boost Added: {:#?}", msg.boost_added().unwrap()),
+                        )
+                        .await?;
+                        Ok(())
+                    },
+                ))
+                .branch(
                     dptree::filter(|cfg: ConfigParameters, msg: Message| {
                         msg.from
                             .map(|user| user.id == cfg.bot_maintainer)
@@ -120,6 +156,23 @@ async fn main() {
                                     )
                                     .await?;
                                     Ok::<(), RequestError>(())
+                                }
+                                MaintainerCommands::Tba71 => {
+                                    bot.send_message(
+                                        msg.chat.id,
+                                        format!(
+                                            "unrestrict_boost_count: {:?}, custom_emoji_sticker_set_name: {:?}",
+                                            bot.get_chat(msg.chat.id).await?.unrestrict_boost_count(), bot.get_chat(msg.chat.id).await?.custom_emoji_sticker_set_name()
+                                        ),
+                                    )
+                                    .reply_parameters(ReplyParameters {
+                                        message_id: msg.id,
+                                        chat_id: None,
+                                        allow_sending_without_reply: None,
+                                        quote: None,
+                                    })
+                                    .await?;
+                                    Ok(())
                                 }
                             }
                         },
@@ -180,6 +233,28 @@ async fn main() {
                         .await?;
                         Ok(())
                     }),
+                )
+                .branch(
+                    dptree::filter(|msg: Message| {
+                        msg.sender_boost_count.map(|c| c > 0).unwrap_or(false)
+                    })
+                    .endpoint(|msg: Message, bot: Bot| async move {
+                        bot.send_message(
+                            msg.chat.id,
+                            format!(
+                                "This user gave us {} boosts!",
+                                msg.sender_boost_count.unwrap()
+                            ),
+                        )
+                        .reply_parameters(ReplyParameters {
+                            message_id: msg.id,
+                            chat_id: None,
+                            allow_sending_without_reply: None,
+                            quote: None,
+                        })
+                        .await?;
+                        Ok(())
+                    }),
                 ),
         );
 
@@ -206,7 +281,10 @@ struct ConfigParameters {
 #[command(rename_rule = "lowercase")]
 enum MaintainerCommands {
     #[command(parse_with = "split")]
-    Rights { user_id: u64 },
+    Rights {
+        user_id: u64,
+    },
+    Tba71,
 }
 
 #[derive(BotCommands, Clone)]

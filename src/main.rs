@@ -3,6 +3,7 @@ use teloxide::{
     types::{
         ChatBoostRemoved, ChatBoostUpdated, LinkPreviewOptions, MessageEntityKind,
         MessageReactionCountUpdated, MessageReactionUpdated, ReactionType, ReactionTypeKind,
+        ReplyParameters,
     },
     utils::command::BotCommands,
     RequestError,
@@ -65,7 +66,12 @@ async fn main() {
                             };
 
                             bot.send_message(msg.chat.id, text)
-                                .reply_to_message_id(msg.id)
+                                .reply_parameters(ReplyParameters {
+                                    message_id: msg.id,
+                                    chat_id: None,
+                                    allow_sending_without_reply: None,
+                                    quote: None,
+                                })
                                 .await?;
                             Ok(())
                         }
@@ -78,7 +84,12 @@ async fn main() {
                                         .await?
                                 ),
                             )
-                            .reply_to_message_id(msg.id)
+                            .reply_parameters(ReplyParameters {
+                                message_id: msg.id,
+                                chat_id: None,
+                                allow_sending_without_reply: None,
+                                quote: None,
+                            })
                             .await?;
                             Ok(())
                         }
@@ -89,7 +100,7 @@ async fn main() {
             Update::filter_message()
                 .branch(
                     dptree::filter(|cfg: ConfigParameters, msg: Message| {
-                        msg.from()
+                        msg.from
                             .map(|user| user.id == cfg.bot_maintainer)
                             .unwrap_or_default()
                     })
@@ -149,7 +160,12 @@ async fn main() {
                             msg.chat.id,
                             format!("LinkPreviewOptions: {link_preview_options:#?}"),
                         )
-                        .reply_to_message_id(msg.id)
+                        .reply_parameters(ReplyParameters {
+                            message_id: msg.id,
+                            chat_id: None,
+                            allow_sending_without_reply: None,
+                            quote: None,
+                        })
                         .link_preview_options(
                             link_preview_options
                                 .unwrap_or(&LinkPreviewOptions {

@@ -3,7 +3,7 @@ name = "teloxide-test-bot"
 version = "0.1.0"
 authors = ["Andrey Brusnik <dev@shdwchn.io>"]
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.80"
 publish = false
 
 [dependencies]
@@ -11,5 +11,5 @@ log = "0.4"
 pretty_env_logger = "0.5"
 teloxide = { features = [
     "full",
-], git = "https://github.com/shdwchn10/teloxide.git", branch = "support-tba-7.0-p2" }
-tokio = { features = ["full"], version = "1.38" }
+], git = "https://github.com/shdwchn10/teloxide.git", branch = "feature/tba-support/7.3" }
+tokio = { features = ["full"], version = "1.39" }

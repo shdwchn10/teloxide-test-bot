@@ -1,12 +1,12 @@
+use std::time::Duration;
+
 use teloxide::{
     prelude::*,
-    types::{
-        ChatBoostRemoved, ChatBoostUpdated, LinkPreviewOptions, MessageEntityKind,
-        MessageReactionCountUpdated, MessageReactionUpdated, ReactionType, ReactionTypeKind,
-    },
+    types::{ChatMemberUpdated, InputPollOption, LivePeriod, ParseMode},
     utils::command::BotCommands,
     RequestError,
 };
+use tokio::time;
 
 #[tokio::main]
 async fn main() {
@@ -22,74 +22,28 @@ async fn main() {
         .inspect(|u: Update| {
             eprintln!("{u:#?}"); // Print the update to the console with inspect
         })
-        .branch(Update::filter_message_reaction_updated().endpoint(
-            |msg: MessageReactionUpdated, bot: Bot| async move {
-                bot.send_message(msg.chat.id, format!("MessageReactionUpdated: {:#?}", msg))
+        .branch(Update::filter_chat_member().endpoint(
+            |msg: ChatMemberUpdated, bot: Bot| async move {
+                bot.send_message(msg.chat.id, format!("ChatMemberUpdated: {:#?}", msg))
                     .await?;
                 Ok::<(), RequestError>(())
             },
         ))
-        .branch(Update::filter_message_reaction_count_updated().endpoint(
-            |msg: MessageReactionCountUpdated, bot: Bot| async move {
-                bot.send_message(
-                    msg.chat.id,
-                    format!("MessageReactionCountUpdated: {:#?}", msg),
-                )
-                .await?;
-                Ok::<(), RequestError>(())
-            },
-        ))
-        .branch(Update::filter_chat_boost().endpoint(
-            |upd: ChatBoostUpdated, bot: Bot| async move {
-                bot.send_message(upd.chat.id, format!("ChatBoostUpdated: {:#?}", upd))
-                    .await?;
-                Ok(())
-            },
-        ))
-        .branch(Update::filter_removed_chat_boost().endpoint(
-            |upd: ChatBoostRemoved, bot: Bot| async move {
-                bot.send_message(upd.chat.id, format!("ChatBoostRemoved: {:#?}", upd))
-                    .await?;
-                Ok(())
-            },
-        ))
-        .branch(
-            Update::filter_channel_post()
-                .filter_command::<Commands>()
-                .endpoint(|msg: Message, bot: Bot, cmd: Commands| async move {
-                    match cmd {
-                        Commands::Reactions => {
-                            let text = match bot.get_chat(msg.chat.id).await?.available_reactions {
-                                Some(r) => format!("Available reactions: {r:?}"),
-                                None => "All reactions are available".to_owned(),
-                            };
-
-                            bot.send_message(msg.chat.id, text)
-                                .reply_to_message_id(msg.id)
-                                .await?;
-                            Ok(())
-                        }
-                        Commands::Boosts { user_id } => {
-                            bot.send_message(
-                                msg.chat.id,
-                                format!(
-                                    "User `{user_id}` boosts: {:?}",
-                                    bot.get_user_chat_boosts(msg.chat.id, UserId(user_id))
-                                        .await?
-                                ),
-                            )
-                            .reply_to_message_id(msg.id)
-                            .await?;
-                            Ok(())
-                        }
-                    }
-                }),
-        )
         .branch(
             Update::filter_message()
                 .branch(
+                    Message::filter_location().endpoint(|msg: Message, bot: Bot| async move {
+                        bot.send_message(
+                            msg.chat.id,
+                            format!("Location: {:#?}", msg.location().unwrap()),
+                        )
+                        .await?;
+                        Ok::<(), RequestError>(())
+                    }),
+                )
+                .branch(
                     dptree::filter(|cfg: ConfigParameters, msg: Message| {
-                        msg.from()
+                        msg.from
                             .map(|user| user.id == cfg.bot_maintainer)
                             .unwrap_or_default()
                     })
@@ -97,71 +51,54 @@ async fn main() {
                     .endpoint(
                         |msg: Message, bot: Bot, cmd: MaintainerCommands| async move {
                             match cmd {
-                                MaintainerCommands::Rights { user_id } => {
+                                MaintainerCommands::Location => {
+                                    let loc_id = bot
+                                        .send_location(
+                                            msg.chat.id,
+                                            38.950504885601845,
+                                            -77.1457524495,
+                                        )
+                                        .live_period(LivePeriod::from_u32(60))
+                                        .await?
+                                        .id;
+
+                                    time::sleep(Duration::from_secs(3)).await;
+
+                                    bot.edit_message_live_location(
+                                        msg.chat.id,
+                                        loc_id,
+                                        39.108889,
+                                        -76.771389,
+                                    )
+                                    .await?;
+
+                                    Ok::<(), RequestError>(())
+                                }
+                                MaintainerCommands::GetMax => {
                                     bot.send_message(
                                         msg.chat.id,
                                         format!(
-                                            "Rights of {user_id}: {:#?}",
-                                            bot.get_chat_member(msg.chat.id, UserId(user_id))
-                                                .await?
-                                                .kind
+                                            "Chat max_reaction_count: {:#?}",
+                                            bot.get_chat(msg.chat.id).await?.max_reaction_count
                                         ),
                                     )
                                     .await?;
-                                    Ok::<(), RequestError>(())
+                                    Ok(())
                                 }
                             }
                         },
                     ),
                 )
                 .branch(
-                    dptree::filter(|msg: Message| {
-                        let Some(text) = msg.text() else { return false };
-                        text.contains('🌭')
-                    })
-                    .endpoint(|msg: Message, bot: Bot| async move {
-                        bot.set_message_reaction(msg.chat.id, msg.id)
-                            .reaction(vec![ReactionType {
-                                kind: ReactionTypeKind::Emoji {
-                                    emoji: '🌭'.into()
-                                },
-                            }])
-                            .is_big(true)
+                    Message::filter_poll().endpoint(|msg: Message, bot: Bot| async move {
+                        let poll = msg.poll().unwrap();
+                        let input_poll_options = poll.options.iter().map(|opt| InputPollOption {
+                            text: format!("cloned: {}", opt.text),
+                            text_parse_mode: Some(ParseMode::Html),
+                            text_entities: opt.text_entities.clone(),
+                        });
+                        bot.send_poll(msg.chat.id, poll.question.clone(), input_poll_options)
                             .await?;
-                        Ok(())
-                    }),
-                )
-                .branch(
-                    dptree::filter(|msg: Message| {
-                        let Some(entities) = msg.entities() else {
-                            return false;
-                        };
-                        entities.iter().any(|e| {
-                            matches!(
-                                e.kind,
-                                MessageEntityKind::Url | MessageEntityKind::TextLink { .. }
-                            )
-                        })
-                    })
-                    .endpoint(|msg: Message, bot: Bot| async move {
-                        let link_preview_options = msg.link_preview_options();
-                        bot.send_message(
-                            msg.chat.id,
-                            format!("LinkPreviewOptions: {link_preview_options:#?}"),
-                        )
-                        .reply_to_message_id(msg.id)
-                        .link_preview_options(
-                            link_preview_options
-                                .unwrap_or(&LinkPreviewOptions {
-                                    is_disabled: None,
-                                    url: None,
-                                    prefer_small_media: None,
-                                    prefer_large_media: None,
-                                    show_above_text: None,
-                                })
-                                .clone(),
-                        )
-                        .await?;
                         Ok(())
                     }),
                 ),
@@ -189,16 +126,10 @@ struct ConfigParameters {
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase")]
 enum MaintainerCommands {
-    #[command(parse_with = "split")]
-    Rights { user_id: u64 },
+    Location,
+    GetMax,
 }
 
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase")]
-enum Commands {
-    Reactions,
-    #[command(parse_with = "split")]
-    Boosts {
-        user_id: u64,
-    },
-}
+enum Commands {}

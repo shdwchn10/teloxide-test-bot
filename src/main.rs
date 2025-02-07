@@ -11,6 +11,8 @@ use teloxide::{
 
 #[tokio::main]
 async fn main() {
+    let _ = dotenvy::dotenv();
+
     pretty_env_logger::init();
 
     let bot = Bot::from_env();

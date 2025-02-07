@@ -2357,6 +2357,7 @@ dependencies = [
 name = "teloxide-test-bot"
 version = "0.1.0"
 dependencies = [
+ "dotenvy",
  "log",
  "pretty_env_logger",
  "teloxide",

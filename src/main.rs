@@ -1,9 +1,9 @@
 use teloxide::{
     prelude::*,
+    sugar::{bot::BotMessagesExt, request::RequestReplyExt},
     types::{
         ChatBoostRemoved, ChatBoostUpdated, LinkPreviewOptions, MessageEntityKind,
-        MessageReactionCountUpdated, MessageReactionUpdated, ReactionType, ReactionTypeKind,
-        ReplyParameters,
+        MessageReactionCountUpdated, MessageReactionUpdated, ReactionType,
     },
     utils::command::BotCommands,
     RequestError,
@@ -60,18 +60,12 @@ async fn main() {
                 .endpoint(|msg: Message, bot: Bot, cmd: Commands| async move {
                     match cmd {
                         Commands::Reactions => {
-                            let text = match bot.get_chat(msg.chat.id).await?.available_reactions {
+                            let text = match bot.get_chat(msg.chat.id).await?.available_reactions() {
                                 Some(r) => format!("Available reactions: {r:?}"),
                                 None => "All reactions are available".to_owned(),
                             };
 
-                            bot.send_message(msg.chat.id, text)
-                                .reply_parameters(ReplyParameters {
-                                    message_id: msg.id,
-                                    chat_id: None,
-                                    allow_sending_without_reply: None,
-                                    quote: None,
-                                })
+                            bot.send_message(msg.chat.id, text).reply_to(msg.id)
                                 .await?;
                             Ok(())
                         }
@@ -83,13 +77,7 @@ async fn main() {
                                     bot.get_user_chat_boosts(msg.chat.id, UserId(user_id))
                                         .await?
                                 ),
-                            )
-                            .reply_parameters(ReplyParameters {
-                                message_id: msg.id,
-                                chat_id: None,
-                                allow_sending_without_reply: None,
-                                quote: None,
-                            })
+                            ).reply_to(msg.id)
                             .await?;
                             Ok(())
                         }
@@ -103,13 +91,7 @@ async fn main() {
                         bot.send_message(
                             msg.chat.id,
                             format!("I hate stories! Story: {:#?}", msg.story().unwrap()),
-                        )
-                        .reply_parameters(ReplyParameters {
-                            message_id: msg.id,
-                            chat_id: None,
-                            allow_sending_without_reply: None,
-                            quote: None,
-                        })
+                        ).reply_to(msg.id)
                         .await?;
                         Ok(())
                     }),
@@ -164,13 +146,7 @@ async fn main() {
                                             "unrestrict_boost_count: {:?}, custom_emoji_sticker_set_name: {:?}",
                                             bot.get_chat(msg.chat.id).await?.unrestrict_boost_count(), bot.get_chat(msg.chat.id).await?.custom_emoji_sticker_set_name()
                                         ),
-                                    )
-                                    .reply_parameters(ReplyParameters {
-                                        message_id: msg.id,
-                                        chat_id: None,
-                                        allow_sending_without_reply: None,
-                                        quote: None,
-                                    })
+                                    ).reply_to(msg.id)
                                     .await?;
                                     Ok(())
                                 }
@@ -184,12 +160,10 @@ async fn main() {
                         text.contains('🌭')
                     })
                     .endpoint(|msg: Message, bot: Bot| async move {
-                        bot.set_message_reaction(msg.chat.id, msg.id)
-                            .reaction(vec![ReactionType {
-                                kind: ReactionTypeKind::Emoji {
+                        bot.set_reaction(&msg)
+                            .reaction(vec![ReactionType::Emoji {
                                     emoji: '🌭'.into()
-                                },
-                            }])
+                                }])
                             .is_big(true)
                             .await?;
                         Ok(())
@@ -212,21 +186,15 @@ async fn main() {
                         bot.send_message(
                             msg.chat.id,
                             format!("LinkPreviewOptions: {link_preview_options:#?}"),
-                        )
-                        .reply_parameters(ReplyParameters {
-                            message_id: msg.id,
-                            chat_id: None,
-                            allow_sending_without_reply: None,
-                            quote: None,
-                        })
+                        ).reply_to(msg.id)
                         .link_preview_options(
                             link_preview_options
                                 .unwrap_or(&LinkPreviewOptions {
-                                    is_disabled: None,
+                                    is_disabled: false,
                                     url: None,
-                                    prefer_small_media: None,
-                                    prefer_large_media: None,
-                                    show_above_text: None,
+                                    prefer_small_media: false,
+                                    prefer_large_media: false,
+                                    show_above_text: false,
                                 })
                                 .clone(),
                         )
@@ -234,28 +202,6 @@ async fn main() {
                         Ok(())
                     }),
                 )
-                .branch(
-                    dptree::filter(|msg: Message| {
-                        msg.sender_boost_count.map(|c| c > 0).unwrap_or(false)
-                    })
-                    .endpoint(|msg: Message, bot: Bot| async move {
-                        bot.send_message(
-                            msg.chat.id,
-                            format!(
-                                "This user gave us {} boosts!",
-                                msg.sender_boost_count.unwrap()
-                            ),
-                        )
-                        .reply_parameters(ReplyParameters {
-                            message_id: msg.id,
-                            chat_id: None,
-                            allow_sending_without_reply: None,
-                            quote: None,
-                        })
-                        .await?;
-                        Ok(())
-                    }),
-                ),
         );
 
     Dispatcher::builder(bot.clone(), handler)

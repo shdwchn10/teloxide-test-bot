@@ -2,10 +2,10 @@ use teloxide::{
     prelude::*,
     sugar::{bot::BotMessagesExt, request::RequestReplyExt},
     types::{
-        ChatBoostRemoved, ChatBoostUpdated, LinkPreviewOptions, MessageEntityKind,
-        MessageReactionCountUpdated, MessageReactionUpdated, ReactionType,
+        ChatBoostRemoved, ChatBoostUpdated, InputFile, LinkPreviewOptions, MessageEntityKind,
+        MessageReactionCountUpdated, MessageReactionUpdated, ParseMode, ReactionType,
     },
-    utils::command::BotCommands,
+    utils::{command::BotCommands, render::Renderer},
     RequestError,
 };
 
@@ -25,185 +25,55 @@ async fn main() {
         .inspect(|u: Update| {
             eprintln!("{u:#?}"); // Print the update to the console with inspect
         })
-        .branch(Update::filter_message_reaction_updated().endpoint(
-            |msg: MessageReactionUpdated, bot: Bot| async move {
-                bot.send_message(msg.chat.id, format!("MessageReactionUpdated: {:#?}", msg))
-                    .await?;
-                Ok::<(), RequestError>(())
-            },
-        ))
-        .branch(Update::filter_message_reaction_count_updated().endpoint(
-            |msg: MessageReactionCountUpdated, bot: Bot| async move {
-                bot.send_message(
-                    msg.chat.id,
-                    format!("MessageReactionCountUpdated: {:#?}", msg),
-                )
-                .await?;
-                Ok::<(), RequestError>(())
-            },
-        ))
-        .branch(Update::filter_chat_boost().endpoint(
-            |upd: ChatBoostUpdated, bot: Bot| async move {
-                bot.send_message(upd.chat.id, format!("ChatBoostUpdated: {:#?}", upd))
-                    .await?;
-                Ok(())
-            },
-        ))
-        .branch(Update::filter_removed_chat_boost().endpoint(
-            |upd: ChatBoostRemoved, bot: Bot| async move {
-                bot.send_message(upd.chat.id, format!("ChatBoostRemoved: {:#?}", upd))
-                    .await?;
-                Ok(())
-            },
-        ))
-        .branch(
-            Update::filter_channel_post()
-                .filter_command::<Commands>()
-                .endpoint(|msg: Message, bot: Bot, cmd: Commands| async move {
-                    match cmd {
-                        Commands::Reactions => {
-                            let text = match bot.get_chat(msg.chat.id).await?.available_reactions() {
-                                Some(r) => format!("Available reactions: {r:?}"),
-                                None => "All reactions are available".to_owned(),
-                            };
-
-                            bot.send_message(msg.chat.id, text).reply_to(msg.id)
-                                .await?;
-                            Ok(())
-                        }
-                        Commands::Boosts { user_id } => {
-                            bot.send_message(
-                                msg.chat.id,
-                                format!(
-                                    "User `{user_id}` boosts: {:?}",
-                                    bot.get_user_chat_boosts(msg.chat.id, UserId(user_id))
-                                        .await?
-                                ),
-                            ).reply_to(msg.id)
-                            .await?;
-                            Ok(())
-                        }
-                    }
-                }),
-        )
         .branch(
             Update::filter_message()
                 .branch(
-                    Message::filter_story().endpoint(|msg: Message, bot: Bot| async move {
-                        bot.send_message(
-                            msg.chat.id,
-                            format!("I hate stories! Story: {:#?}", msg.story().unwrap()),
-                        ).reply_to(msg.id)
-                        .await?;
-                        Ok(())
-                    }),
-                )
-                .branch(Message::filter_reply_to_story().endpoint(
-                    |msg: Message, bot: Bot| async move {
-                        bot.send_message(
-                            msg.chat.id,
-                            format!("Reply to Story: {:#?}", msg.reply_to_story().unwrap()),
-                        )
-                        .await?;
-                        Ok(())
-                    },
-                ))
-                .branch(Message::filter_boost_added().endpoint(
-                    |msg: Message, bot: Bot| async move {
-                        bot.send_message(
-                            msg.chat.id,
-                            format!("Chat Boost Added: {:#?}", msg.boost_added().unwrap()),
-                        )
-                        .await?;
-                        Ok(())
-                    },
-                ))
-                .branch(
-                    dptree::filter(|cfg: ConfigParameters, msg: Message| {
-                        msg.from
-                            .map(|user| user.id == cfg.bot_maintainer)
-                            .unwrap_or_default()
-                    })
-                    .filter_command::<MaintainerCommands>()
-                    .endpoint(
-                        |msg: Message, bot: Bot, cmd: MaintainerCommands| async move {
-                            match cmd {
-                                MaintainerCommands::Rights { user_id } => {
-                                    bot.send_message(
-                                        msg.chat.id,
-                                        format!(
-                                            "Rights of {user_id}: {:#?}",
-                                            bot.get_chat_member(msg.chat.id, UserId(user_id))
-                                                .await?
-                                                .kind
-                                        ),
-                                    )
-                                    .await?;
-                                    Ok::<(), RequestError>(())
-                                }
-                                MaintainerCommands::Tba71 => {
-                                    bot.send_message(
-                                        msg.chat.id,
-                                        format!(
-                                            "unrestrict_boost_count: {:?}, custom_emoji_sticker_set_name: {:?}",
-                                            bot.get_chat(msg.chat.id).await?.unrestrict_boost_count(), bot.get_chat(msg.chat.id).await?.custom_emoji_sticker_set_name()
-                                        ),
-                                    ).reply_to(msg.id)
-                                    .await?;
-                                    Ok(())
-                                }
-                            }
+                    dptree::filter(|msg: Message| msg.effect_id().is_some()).endpoint(
+                        |msg: Message, bot: Bot| async move {
+                            let effect = msg.effect_id().unwrap();
+                            bot.send_message(msg.chat.id, format!("Effect: '{}'", effect))
+                                .reply_to(msg.id)
+                                .message_effect_id(effect)
+                                .await?;
+                            Ok::<(), RequestError>(())
                         },
                     ),
                 )
                 .branch(
                     dptree::filter(|msg: Message| {
-                        let Some(text) = msg.text() else { return false };
-                        text.contains('🌭')
+                        msg.show_caption_above_media() && msg.photo().is_some()
                     })
                     .endpoint(|msg: Message, bot: Bot| async move {
-                        bot.set_reaction(&msg)
-                            .reaction(vec![ReactionType::Emoji {
-                                    emoji: '🌭'.into()
-                                }])
-                            .is_big(true)
+                        let photo = msg.photo().unwrap();
+                        bot.send_photo(msg.chat.id, InputFile::file_id(photo[0].file.id.clone()))
+                            .caption(msg.caption().unwrap_or_default())
+                            .show_caption_above_media(msg.show_caption_above_media())
+                            .reply_to(msg.id)
                             .await?;
                         Ok(())
                     }),
                 )
                 .branch(
-                    dptree::filter(|msg: Message| {
-                        let Some(entities) = msg.entities() else {
-                            return false;
-                        };
-                        entities.iter().any(|e| {
-                            matches!(
-                                e.kind,
-                                MessageEntityKind::Url | MessageEntityKind::TextLink { .. }
-                            )
-                        })
-                    })
-                    .endpoint(|msg: Message, bot: Bot| async move {
-                        let link_preview_options = msg.link_preview_options();
-                        bot.send_message(
-                            msg.chat.id,
-                            format!("LinkPreviewOptions: {link_preview_options:#?}"),
-                        ).reply_to(msg.id)
-                        .link_preview_options(
-                            link_preview_options
-                                .unwrap_or(&LinkPreviewOptions {
-                                    is_disabled: false,
-                                    url: None,
-                                    prefer_small_media: false,
-                                    prefer_large_media: false,
-                                    show_above_text: false,
-                                })
-                                .clone(),
-                        )
-                        .await?;
+                    Message::filter_text().endpoint(|msg: Message, bot: Bot| async move {
+                        let render =
+                            Renderer::new(msg.text().unwrap(), msg.entities().unwrap_or_default());
+
+                        bot.send_message(msg.chat.id, msg.text().unwrap())
+                            .reply_to(msg.id)
+                            .entities(msg.entities().unwrap_or_default().to_owned())
+                            .await?;
+                        bot.send_message(msg.chat.id, render.as_html())
+                            .reply_to(msg.id)
+                            .parse_mode(ParseMode::Html)
+                            .await?;
+                        bot.send_message(msg.chat.id, render.as_markdown())
+                            .reply_to(msg.id)
+                            .parse_mode(ParseMode::MarkdownV2)
+                            .await?;
+
                         Ok(())
                     }),
-                )
+                ),
         );
 
     Dispatcher::builder(bot.clone(), handler)

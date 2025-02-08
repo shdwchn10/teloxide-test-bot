@@ -2281,7 +2281,7 @@ checksum = "20f34339676cdcab560c9a82300c4c2581f68b9369aedf0fae86f2ff9565ff3e"
 [[package]]
 name = "teloxide"
 version = "0.13.0"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/tba-support/7.4#89bff72f7735d189a20916ec22707a2165a88cd1"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/tba-support/7.4#4bcdbb088668b7c15d099d33c61df30b0675a1b7"
 dependencies = [
  "aquamarine",
  "axum",
@@ -2314,7 +2314,7 @@ dependencies = [
 [[package]]
 name = "teloxide-core"
 version = "0.10.1"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/tba-support/7.4#89bff72f7735d189a20916ec22707a2165a88cd1"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/tba-support/7.4#4bcdbb088668b7c15d099d33c61df30b0675a1b7"
 dependencies = [
  "bitflags",
  "bytes",
@@ -2345,7 +2345,7 @@ dependencies = [
 [[package]]
 name = "teloxide-macros"
 version = "0.8.0"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/tba-support/7.4#89bff72f7735d189a20916ec22707a2165a88cd1"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/tba-support/7.4#4bcdbb088668b7c15d099d33c61df30b0675a1b7"
 dependencies = [
  "heck",
  "proc-macro2",

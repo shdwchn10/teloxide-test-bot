@@ -218,9 +218,9 @@ checksum = "f61dac84819c6588b558454b194026eb1f09c293b9036ae9b159e74e73ab6cf9"
 
 [[package]]
 name = "cc"
-version = "1.2.12"
+version = "1.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "755717a7de9ec452bf7f3f1a3099085deabd7f2962b861dae91ecd7a365903d2"
+checksum = "c7777341816418c02e033934a09f20dc0ccaf65a5201ef8a450ae0105a573fda"
 dependencies = [
  "shlex",
 ]
@@ -2281,7 +2281,7 @@ checksum = "20f34339676cdcab560c9a82300c4c2581f68b9369aedf0fae86f2ff9565ff3e"
 [[package]]
 name = "teloxide"
 version = "0.13.0"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/tba-support/7.4#4bcdbb088668b7c15d099d33c61df30b0675a1b7"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/request-sugar-adaptors#1107850793ad4a4764e2348aa63a4ea29a514bcd"
 dependencies = [
  "aquamarine",
  "axum",
@@ -2314,7 +2314,7 @@ dependencies = [
 [[package]]
 name = "teloxide-core"
 version = "0.10.1"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/tba-support/7.4#4bcdbb088668b7c15d099d33c61df30b0675a1b7"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/request-sugar-adaptors#1107850793ad4a4764e2348aa63a4ea29a514bcd"
 dependencies = [
  "bitflags",
  "bytes",
@@ -2345,7 +2345,7 @@ dependencies = [
 [[package]]
 name = "teloxide-macros"
 version = "0.8.0"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/tba-support/7.4#4bcdbb088668b7c15d099d33c61df30b0675a1b7"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/request-sugar-adaptors#1107850793ad4a4764e2348aa63a4ea29a514bcd"
 dependencies = [
  "heck",
  "proc-macro2",

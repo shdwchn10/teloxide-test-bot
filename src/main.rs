@@ -1,6 +1,5 @@
 use teloxide::{
-    prelude::*, sugar::request::RequestReplyExt, types::ParseMode, utils::render::Renderer,
-    RequestError,
+    prelude::*, sugar::request::RequestReplyExt, types::ParseMode, utils::markdown, RequestError,
 };
 
 #[tokio::main]
@@ -18,18 +17,7 @@ async fn main() {
         .branch(
             Update::filter_message().branch(Message::filter_text().endpoint(
                 |msg: Message, bot: Bot| async move {
-                    let render =
-                        Renderer::new(msg.text().unwrap(), msg.entities().unwrap_or_default());
-
-                    bot.send_message(msg.chat.id, msg.text().unwrap())
-                        .reply_to(msg.id)
-                        .entities(msg.entities().unwrap_or_default().to_owned())
-                        .await?;
-                    bot.send_message(msg.chat.id, render.as_html())
-                        .reply_to(msg.id)
-                        .parse_mode(ParseMode::Html)
-                        .await?;
-                    bot.send_message(msg.chat.id, render.as_markdown())
+                    bot.send_message(msg.chat.id, markdown::blockquote(msg.text().unwrap()))
                         .reply_to(msg.id)
                         .parse_mode(ParseMode::MarkdownV2)
                         .await?;

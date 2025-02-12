@@ -1288,9 +1288,9 @@ dependencies = [
 
 [[package]]
 name = "miniz_oxide"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8402cab7aefae129c6977bb0ff1b8fd9a04eb5b51efc50a70bea51cda0c7924"
+checksum = "b3b1c9bd4fe1f0f8b387f6eb9eb3b4a1aa26185e5750efb9140301703f62cd1b"
 dependencies = [
  "adler2",
 ]
@@ -1814,9 +1814,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.22"
+version = "0.23.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fb9263ab4eb695e42321db096e3b8fbd715a59b154d5c88d82db2175b681ba7"
+checksum = "47796c98c480fce5406ef69d1c76378375492c3b0a0de587be0c1d9feb12f395"
 dependencies = [
  "once_cell",
  "ring",
@@ -2281,7 +2281,7 @@ checksum = "20f34339676cdcab560c9a82300c4c2581f68b9369aedf0fae86f2ff9565ff3e"
 [[package]]
 name = "teloxide"
 version = "0.13.0"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/blockquote_render#f7432607811e0f2301d9579906c64feaebc47852"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/markdown-utils-blockquote#a43f1277c3730b7c56f41c9062e8218173fa29aa"
 dependencies = [
  "aquamarine",
  "axum",
@@ -2308,13 +2308,14 @@ dependencies = [
  "tokio-util",
  "tower",
  "tower-http",
+ "tracing",
  "url",
 ]
 
 [[package]]
 name = "teloxide-core"
 version = "0.10.1"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/blockquote_render#f7432607811e0f2301d9579906c64feaebc47852"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/markdown-utils-blockquote#a43f1277c3730b7c56f41c9062e8218173fa29aa"
 dependencies = [
  "bitflags",
  "bytes",
@@ -2345,7 +2346,7 @@ dependencies = [
 [[package]]
 name = "teloxide-macros"
 version = "0.8.0"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/blockquote_render#f7432607811e0f2301d9579906c64feaebc47852"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/markdown-utils-blockquote#a43f1277c3730b7c56f41c9062e8218173fa29aa"
 dependencies = [
  "heck",
  "proc-macro2",

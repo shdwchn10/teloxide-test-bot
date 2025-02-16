@@ -12,5 +12,5 @@ log = "0.4"
 pretty_env_logger = "0.5"
 teloxide = { features = [
     "full",
-], git = "https://github.com/shdwchn10/teloxide.git", branch = "fix/markdown-utils-blockquote" }
+], git = "https://github.com/shdwchn10/teloxide.git", branch = "feature/is_deactivated" }
 tokio = { features = ["full"], version = "1.43" }

@@ -2281,7 +2281,7 @@ checksum = "20f34339676cdcab560c9a82300c4c2581f68b9369aedf0fae86f2ff9565ff3e"
 [[package]]
 name = "teloxide"
 version = "0.13.0"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/markdown-utils-blockquote#a43f1277c3730b7c56f41c9062e8218173fa29aa"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/is_deactivated#1da5d4e8dd7e5c8408cc08367bc2c398915c969b"
 dependencies = [
  "aquamarine",
  "axum",
@@ -2315,7 +2315,7 @@ dependencies = [
 [[package]]
 name = "teloxide-core"
 version = "0.10.1"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/markdown-utils-blockquote#a43f1277c3730b7c56f41c9062e8218173fa29aa"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/is_deactivated#1da5d4e8dd7e5c8408cc08367bc2c398915c969b"
 dependencies = [
  "bitflags",
  "bytes",
@@ -2346,7 +2346,7 @@ dependencies = [
 [[package]]
 name = "teloxide-macros"
 version = "0.8.0"
-source = "git+https://github.com/shdwchn10/teloxide.git?branch=fix/markdown-utils-blockquote#a43f1277c3730b7c56f41c9062e8218173fa29aa"
+source = "git+https://github.com/shdwchn10/teloxide.git?branch=feature/is_deactivated#1da5d4e8dd7e5c8408cc08367bc2c398915c969b"
 dependencies = [
  "heck",
  "proc-macro2",

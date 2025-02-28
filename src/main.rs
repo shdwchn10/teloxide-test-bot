@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use teloxide::{
     prelude::*,
-    types::{ChatMemberUpdated, InputPollOption, LivePeriod, ParseMode},
+    types::{ChatMemberUpdated, InputPollOption, InputPollOptionFormatting, LivePeriod},
     utils::command::BotCommands,
     RequestError,
 };
@@ -96,8 +96,10 @@ async fn main() {
                         let poll = msg.poll().unwrap();
                         let input_poll_options = poll.options.iter().map(|opt| InputPollOption {
                             text: format!("cloned: {}", opt.text),
-                            text_parse_mode: Some(ParseMode::Html),
-                            text_entities: opt.text_entities.clone(),
+                            formatting: opt
+                                .text_entities
+                                .clone()
+                                .map(InputPollOptionFormatting::TextEntities),
                         });
                         bot.send_poll(msg.chat.id, poll.question.clone(), input_poll_options)
                             .await?;
